@@ -1,10 +1,32 @@
 package net.teamio.smfperm;
 
+/*
+ * TODO: add groups.yml configuration file with format:
+ * 
+ * groups:
+ *     10:
+ *     - Members
+ *     - Admins
+ *     - Default
+ *     2:
+ *     - Members
+ *     - Default
+ * 
+ * TODO: create Async task to handle permissions. We don't want this
+ * holding down the whole server.
+ * 
+ * FUTURE: Integrate xAuth capability with this. But for now, no.
+ * (We cannot take from AuthDB; it is not open-source.)
+ */
+
 import lib.PatPeter.SQLibrary.MySQL;
 import net.milkbowl.vault.chat.Chat;
 import net.milkbowl.vault.permission.Permission;
 import net.teamio.ThreadHelper;
+import net.teamio.smfperm.SMFPermPlayerListener;
 
+import org.bukkit.event.Event;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.ConfigurationException;
@@ -15,11 +37,16 @@ public class SMFPerm extends JavaPlugin{
 	protected MySQL connection;
 	protected static Permission permission = null;
 	protected static Chat chat = null;
+	private final SMFPermPlayerListener playerListener = new SMFPermPlayerListener(this);
+	private PluginManager pm = this.getServer().getPluginManager();
 
 	@Override
 	public void onDisable() {
 		// TODO Auto-generated method stub
-		
+		th.print("SMFPerm shutdown call caught, disabling...",1);
+		th.print("Closing connection to MySQL database...",0);
+		connection.close();
+		th.print("Closed SMFPerm version " + this.getDescription().getVersion(),1);
 	}
 
 	@Override
@@ -40,12 +67,22 @@ public class SMFPerm extends JavaPlugin{
 				}
 				else{
 					th.print("Loaded configuration.", 0);
-					
+					if(!setupMySQL()){
+						th.print("Failed to establish a connection to MySQL, disabling.",-1);
+						onDisable();
+					}
+					else if (!setupListener()){
+						th.print("Failed to register listeners, disabling.",-1);
+						onDisable();
+					}
+					else
+						th.print("Loaded!", 0);
 				}
 			} catch (ConfigurationException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 				th.print("Could not write/load configuration! Do you have permissions?", -1);
+				th.print("Or maybe an invalid configuration? (Use Notepad++! It can spot invisible characters.)",-1);
 				onDisable();
 			}
 		}
@@ -53,6 +90,12 @@ public class SMFPerm extends JavaPlugin{
 	}
 	
 	
+	private boolean setupListener() {
+		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Event.Priority.Normal, this);
+		pm.registerEvent(Event.Type.PLAYER_CHANGED_WORLD, playerListener, Event.Priority.Normal, this);
+		return true;
+	}
+
 	private boolean setupPermission(){
 		RegisteredServiceProvider<Permission> permissionProvider = getServer().getServicesManager().getRegistration(net.milkbowl.vault.permission.Permission.class);
 		if (permissionProvider != null) {
@@ -114,11 +157,18 @@ public class SMFPerm extends JavaPlugin{
 				th.defaults.set("displayname_field", "real_name");
 				setup = true;
 			}
+			if (!th.defaults.contains("rank_field")){
+				th.defaults.set("rank_field","id_group");
+				setup = true;
+			}
 			th.actDefaultsFile(true);
 		}catch(Exception e1){
 			e1.printStackTrace();
 			throw new ConfigurationException("Could not set defaults!");
 		}
+		
+		/* groups configuration */
+		
 
 		return setup;
 	}
