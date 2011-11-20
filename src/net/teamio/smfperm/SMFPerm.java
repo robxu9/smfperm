@@ -16,6 +16,7 @@ package net.teamio.smfperm;
  * holding down the whole server.
  * 
  * FUTURE: Integrate xAuth capability with this. But for now, no.
+ * OKB3 had a secure mode we could also implement.
  * (We cannot take from AuthDB; it is not open-source.)
  */
 
