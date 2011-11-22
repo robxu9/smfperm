@@ -39,11 +39,9 @@ public class SMFPerm extends JavaPlugin{
 	protected static Permission permission = null;
 	protected static Chat chat = null;
 	private final SMFPermPlayerListener playerListener = new SMFPermPlayerListener(this);
-	private PluginManager pm = this.getServer().getPluginManager();
 
 	@Override
 	public void onDisable() {
-		// TODO Auto-generated method stub
 		th.print("SMFPerm shutdown call caught, disabling...",1);
 		th.print("Closing connection to MySQL database...",0);
 		connection.close();
@@ -52,7 +50,7 @@ public class SMFPerm extends JavaPlugin{
 
 	@Override
 	public void onEnable() {
-		// TODO Auto-generated method stub
+		PluginManager pm = this.getServer().getPluginManager();
 		th.print("Starting up SMFPerm version " + this.getDescription().getVersion() + "...",0);
 		if (!setupPermission()){
 			th.print("Vault failed to setup permissions, disabling.",-1);
@@ -72,7 +70,7 @@ public class SMFPerm extends JavaPlugin{
 						th.print("Failed to establish a connection to MySQL, disabling.",-1);
 						onDisable();
 					}
-					else if (!setupListener()){
+					else if (!setupListener(pm)){
 						th.print("Failed to register listeners, disabling.",-1);
 						onDisable();
 					}
@@ -91,7 +89,7 @@ public class SMFPerm extends JavaPlugin{
 	}
 	
 	
-	private boolean setupListener() {
+	private boolean setupListener(PluginManager pm) {
 		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Event.Priority.Normal, this);
 		pm.registerEvent(Event.Type.PLAYER_CHANGED_WORLD, playerListener, Event.Priority.Normal, this);
 		return true;
